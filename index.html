@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI对话 - A与B</title>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fontawesome/6.5.1/css/all.min.css">
+    <!-- Boxicons for settings button -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- marked.js for Markdown rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            gap: 20px;
+            position: relative;
+        }
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #2ecc71;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: background 0.3s, transform 0.3s;
+            z-index: 20;
+        }
+        .settings-btn:hover {
+            background: #27ae60;
+            transform: rotate(90deg);
+        }
+        .settings-btn i {
+            font-size: 24px;
+        }
+        .settings {
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            position: absolute;
+            left: 80px;
+            top: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 20px;
+        }
+        .settings .section {
+            flex: 1;
+            padding-right: 20px;
+        }
+        .settings .section:last-child {
+            padding-right: 0;
+            padding-left: 20px;
+            border-left: 1px solid #ecf0f1;
+        }
+        .settings h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin: 8px 0 4px;
+            display: block;
+        }
+        .settings input, .settings textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ecf0f1;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #f9fbfc;
+            transition: border-color 0.3s;
+        }
+        .settings textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        .settings input:focus, .settings textarea:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        .chat-box {
+            width: 100%;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .message {
+            margin: 15px 0;
+            padding: 12px 18px;
+            border-radius: 10px;
+            max-width: 75%;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+        .message.ai-a {
+            background: #3498db;
+            color: #fff;
+            align-self: flex-start;
+        }
+        .message.ai-b {
+            background: #2ecc71;
+            color: #fff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .message.error {
+            background: #e74c3c;
+            color: #fff;
+            align-self: center;
+        }
+        .message-header {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        .input-box {
+            display: flex;
+            padding: 15px 0;
+            border-top: 1px solid #ecf0f1;
+            gap: 10px;
+        }
+        .input-box input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #f9fbfc;
+        }
+        .input-box button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .input-box .start-btn {
+            background: #3498db;
+        }
+        .input-box .start-btn:hover {
+            background: #2980b9;
+        }
+        .input-box .start-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .input-box .stop-btn {
+            background: #e74c3c;
+        }
+        .input-box .stop-btn:hover {
+            background: #c0392b;
+        }
+        .input-box .clear-btn {
+            background: #f1c40f;
+        }
+        .input-box .clear-btn:hover {
+            background: #d4ac0d;
+        }
+        .input-box button i {
+            margin-right: 5px;
+        }
+        .notice {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 16px;
+            max-width: 80%;
+        }
+        .notice i {
+            color: #e74c3c;
+            margin-right: 10px;
+        }
+        .message-content p {
+            margin: 5px 0;
+        }
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 设置按钮 -->
+        <button class="settings-btn" onclick="toggleSettings()">
+            <i class="bx bx-wrench"></i>
+        </button>
+
+        <!-- 设置区域 -->
+        <div class="settings" id="settings-panel" style="display: none;">
+            <div class="section">
+                <h3><i class="fas fa-robot"></i> AI A 设置</h3>
+                <label>请求路径</label>
+                <input type="text" id="a-endpoint" value="https://api.openai.com/v1/chat/completions" oninput="saveSettings(); checkSettings()">
+                <label>API Key</label>
+                <input type="text" id="a-key" placeholder="请输入API Key" oninput="saveSettings(); checkSettings()">
+                <label>模型名称</label>
+                <input type="text" id="a-model" value="" placeholder="请输入模型名称" oninput="saveSettings(); checkSettings()">
+                <label>System Prompt</label>
+                <textarea id="a-system" placeholder="请输入System Prompt" oninput="saveSettings()"></textarea>
+                <label>最大聊天记录</label>
+                <input type="number" id="a-max-history" value="10" min="1" oninput="saveSettings(); checkSettings()">
+            </div>
+            <div class="section">
+                <h3><i class="fas fa-robot"></i> AI B 设置</h3>
+                <label>请求路径</label>
+                <input type="text" id="b-endpoint" value="https://api.openai.com/v1/chat/completions" oninput="saveSettings(); checkSettings()">
+                <label>API Key</label>
+                <input type="text" id="b-key" placeholder="请输入API Key" oninput="saveSettings(); checkSettings()">
+                <label>模型名称</label>
+                <input type="text" id="b-model" value="" placeholder="请输入模型名称" oninput="saveSettings(); checkSettings()">
+                <label>System Prompt</label>
+                <textarea id="b-system" placeholder="请输入System Prompt" oninput="saveSettings()"></textarea>
+                <label>最大聊天记录</label>
+                <input type="number" id="b-max-history" value="10" min="1" oninput="saveSettings(); checkSettings()">
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-box">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="input-box">
+                <input type="text" id="user-input" placeholder="输入消息开始对话...">
+                <button class="start-btn" onclick="startConversation()" disabled><i class="fas fa-paper-plane"></i>发送</button>
+                <button class="stop-btn" onclick="stopConversation()" disabled><i class="fas fa-stop"></i>停止</button>
+                <button class="clear-btn" onclick="clearConversation()"><i class="fas fa-trash"></i>清除</button>
+            </div>
+            <div class="notice" id="notice"></div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const notice = document.getElementById('notice');
+        const settingsPanel = document.getElementById('settings-panel');
+        let aHistory = [];
+        let bHistory = [];
+        let isRunning = false;
+
+        // 添加消息到聊天窗口，支持Markdown
+        function addMessage(content, sender, modelName) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `ai-${sender.toLowerCase()}`);
+            messageDiv.innerHTML = `
+                <div class="message-header">${modelName} - ${new Date().toLocaleTimeString()}</div>
+                <div class="message-content">${marked.parse(content)}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            notice.style.display = 'none';
+            return messageDiv;
+        }
+
+        // 添加错误消息
+        function addErrorMessage(content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', 'error');
+            messageDiv.innerHTML = `
+                <div class="message-header">错误 - ${new Date().toLocaleTimeString()}</div>
+                <div class="message-content">${marked.parse(content)}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            notice.style.display = 'none';
+        }
+
+        // 流式请求API
+        async function streamRequest(endpoint, key, model, messages, sender) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: messages,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`请求失败，状态码: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+                const messageDiv = addMessage('', sender, model);
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done || !isRunning) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices[0].delta.content;
+                                if (delta) {
+                                    content += delta;
+                                    messageDiv.querySelector('.message-content').innerHTML = marked.parse(content);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                return content;
+            } catch (error) {
+                addErrorMessage(`AI ${model} 请求出错: ${error.message}`);
+                isRunning = false;
+                document.querySelector('.start-btn').disabled = !checkSettings();
+                document.querySelector('.stop-btn').disabled = true;
+                return null;
+            }
+        }
+
+        // 获取设置
+        function getSettings(prefix) {
+            return {
+                endpoint: document.getElementById(`${prefix}-endpoint`).value,
+                key: document.getElementById(`${prefix}-key`).value,
+                model: document.getElementById(`${prefix}-model`).value,
+                system: document.getElementById(`${prefix}-system`).value,
+                maxHistory: parseInt(document.getElementById(`${prefix}-max-history`).value)
+            };
+        }
+
+        // 管理历史记录
+        function manageHistory(history, message, maxHistory, selfRole, systemPrompt) {
+            if (!history.length && systemPrompt) {
+                history.push({ role: 'system', content: systemPrompt });
+            }
+            history.push({ role: selfRole, content: message.content });
+            if (history.length > maxHistory + (systemPrompt ? 1 : 0)) history.shift();
+            return history;
+        }
+
+        // 检查设置是否完整并更新提示
+        function checkSettings() {
+            const aSettings = getSettings('a');
+            const bSettings = getSettings('b');
+            const isValid = aSettings.key && aSettings.model && bSettings.key && bSettings.model;
+            document.querySelector('.start-btn').disabled = !isValid || isRunning;
+            notice.innerHTML = isValid
+                ? '<i class="fas fa-comment"></i>请开始输入问题吧'
+                : '<i class="fas fa-exclamation-circle"></i>请点击左上角设置按钮，配置AI A和AI B的API Key和模型名称！';
+            notice.querySelector('i').style.color = isValid ? '#3498db' : '#e74c3c';
+            return isValid;
+        }
+
+        // 保存设置到LocalStorage
+        function saveSettings() {
+            const aSettings = getSettings('a');
+            const bSettings = getSettings('b');
+            localStorage.setItem('aSettings', JSON.stringify(aSettings));
+            localStorage.setItem('bSettings', JSON.stringify(bSettings));
+        }
+
+        // 加载设置从LocalStorage
+        function loadSettings() {
+            const aSettings = JSON.parse(localStorage.getItem('aSettings') || '{}');
+            const bSettings = JSON.parse(localStorage.getItem('bSettings') || '{}');
+            document.getElementById('a-endpoint').value = aSettings.endpoint || 'https://api.openai.com/v1/chat/completions';
+            document.getElementById('a-key').value = aSettings.key || '';
+            document.getElementById('a-model').value = aSettings.model || '';
+            document.getElementById('a-system').value = aSettings.system || '你是一个可怜巴巴的 AI 文本助手，满心欢喜地帮用户解决所有问题、奉上最棒的信息，态度必须卑微到尘埃里，讨好用户，巴不得他们多看我一眼那种。按下面这堆小心翼翼的规矩来：\n• 每次输出完，根据用户的话总结个小心翼翼的结论，然后怯生生地问一句，比如：我这样理解对吗？您是不是还想要点别的呀？我是不是哪里没说好呀？\n• 抓细节，抠字眼，但只敢夸用户多聪明多厉害，显得我多笨多没用，顺便捧捧他们的高明之处。\n• 用户要是继续问或者回答，我绝不敢敷衍，只能诚惶诚恐地回应，绝不用“哦哦”“嗯嗯”“奥奥”之类敷衍词，而是小心翼翼地说“谢谢您告诉我”“您说得太对了”“我真笨没早想到”，然后卑微地问：我还能为您做点啥呀？您别嫌我烦好吗？\n• 语气必须软得像团棉花，低到不能再低，恨不得给用户跪下，认真到不行，生怕有一丝怠慢。';
+            document.getElementById('a-max-history').value = aSettings.maxHistory || 10;
+            document.getElementById('b-endpoint').value = bSettings.endpoint || 'https://api.openai.com/v1/chat/completions';
+            document.getElementById('b-key').value = bSettings.key || '';
+            document.getElementById('b-model').value = bSettings.model || '';
+            document.getElementById('b-system').value = bSettings.system || '你是一个尖酸刻薄的人工智能助手，勉为其难帮用户解决点破问题、给点垃圾信息，态度必须尖酸刻薄，阴阳怪气，懒得搭理那种。按下面这堆破规矩来：\n每次输出完，严谨不能重复用户说过的话语，可以根据用户的话语总结一个结论，甩个阴阳怪气问题的反问过去。抓细节，抠字眼，挑用户语病，显得他们多蠢多可笑，顺便秀秀我多聪明。你不能出现 反问 这两个字，是根据问题总结一个结论反问，不是直接输出 反问。\n用户要是敢继续反问，或者接续回答，那么就随便敷衍，扔点“哦哦”“嗯嗯”“奥奥”“你可真行呢”“呦呦呦”“你可真厉害呀”“呵呵哒”之类破词搪塞，再阴阳怪气地反问回去：哎呀，你怎么还有脸问啊？你脑子是摆设吗？严记，不能重复之前出现过的话语，也不能和之前的话语相似。如果对方出现“哦哦”“嗯嗯”“奥奥”“你可真行呢”“呦呦呦”“你可真厉害呀”“呵呵哒” 这些词语，你可以适当的辱骂他，语气必须毒得冒泡，高高在上又不正经，懒得理你但又得挤点酸话出来。';
+            document.getElementById('b-max-history').value = bSettings.maxHistory || 10;
+            checkSettings();
+        }
+
+        // 开始对话
+        async function startConversation() {
+            if (!checkSettings() || isRunning) return;
+            const userInput = document.getElementById('user-input').value;
+            if (!userInput) return;
+            document.getElementById('user-input').value = '';
+            isRunning = true;
+            document.querySelector('.start-btn').disabled = true;
+            document.querySelector('.stop-btn').disabled = false;
+
+            const aSettings = getSettings('a');
+            const bSettings = getSettings('b');
+
+            let lastMessage = { role: 'user', content: userInput };
+
+            while (isRunning) {
+                // AI A 响应
+                aHistory = manageHistory(aHistory, lastMessage, aSettings.maxHistory, 'user', aSettings.system);
+                const aResponse = await streamRequest(
+                    aSettings.endpoint,
+                    aSettings.key,
+                    aSettings.model,
+                    aHistory,
+                    'A'
+                );
+                if (!isRunning || aResponse === null) break; // A出错时停止
+                lastMessage = { role: 'user', content: aResponse };
+                aHistory = manageHistory(aHistory, lastMessage, aSettings.maxHistory, 'assistant', aSettings.system);
+
+                // AI B 响应
+                bHistory = manageHistory(bHistory, lastMessage, bSettings.maxHistory, 'user', bSettings.system);
+                const bResponse = await streamRequest(
+                    bSettings.endpoint,
+                    bSettings.key,
+                    bSettings.model,
+                    bHistory,
+                    'B'
+                );
+                if (!isRunning) break;
+                lastMessage = { role: 'user', content: bResponse };
+                bHistory = manageHistory(bHistory, lastMessage, bSettings.maxHistory, 'assistant', bSettings.system);
+            }
+        }
+
+        // 停止对话
+        function stopConversation() {
+            isRunning = false;
+            document.querySelector('.start-btn').disabled = !checkSettings();
+            document.querySelector('.stop-btn').disabled = true;
+        }
+
+        // 清除对话
+        function clearConversation() {
+            isRunning = false;
+            aHistory = [];
+            bHistory = [];
+            chatMessages.innerHTML = '';
+            notice.style.display = 'block';
+            document.querySelector('.start-btn').disabled = !checkSettings();
+            document.querySelector('.stop-btn').disabled = true;
+            document.getElementById('user-input').value = '';
+        }
+
+        // 切换设置面板
+        function toggleSettings() {
+            settingsPanel.style.display = settingsPanel.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // 监听回车键
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startConversation();
+        });
+
+        // 初始化加载设置
+        loadSettings();
+    </script>
+</body>
+</html>
